@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/easybbs-admin/easybbs-admin.iml" filepath="$PROJECT_DIR$/easybbs-admin/easybbs-admin.iml" />
+      <module fileurl="file://$PROJECT_DIR$/easybbs-common/easybbs-common.iml" filepath="$PROJECT_DIR$/easybbs-common/easybbs-common.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/easybbs-java.iml" filepath="$PROJECT_DIR$/.idea/easybbs-java.iml" />
+      <module fileurl="file://$PROJECT_DIR$/easybbs-web/easybbs-web.iml" filepath="$PROJECT_DIR$/easybbs-web/easybbs-web.iml" />
+    </modules>
+  </component>
+</project>
