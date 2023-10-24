@@ -56,5 +56,6 @@ public interface UserInfoDao<T,P> extends BaseMapper {
 	 */
 	Integer deleteByNickName(@Param("nickName") String nickName);
 
+	Integer updateIntegral(@Param("userId") String userId,@Param("integral") Integer integer);
 
 }

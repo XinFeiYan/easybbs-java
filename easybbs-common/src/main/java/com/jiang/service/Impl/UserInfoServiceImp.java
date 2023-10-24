@@ -1,16 +1,30 @@
 package com.jiang.service.Impl;
 
 
-import com.jiang.entity.query.UserInfoQuery;
-import com.jiang.entity.query.SimplePage;
-import com.jiang.Enums.PageSizeEnum;
+import com.jiang.Enums.*;
+import com.jiang.Exception.BusinessException;
+import com.jiang.Utils.StringTools;
+import com.jiang.Utils.SysCacheUtils;
+import com.jiang.entity.constants.Constants;
+import com.jiang.entity.po.EmailCode;
+import com.jiang.entity.po.UserIntegralRecord;
+import com.jiang.entity.po.UserMessage;
+import com.jiang.entity.query.*;
+import com.jiang.mapper.EmailCodeDao;
+import com.jiang.mapper.UserIntegralRecordDao;
+import com.jiang.mapper.UserMessageDao;
+import com.jiang.service.EmailCodeService;
 import com.jiang.service.UserInfoService;
 import com.jiang.mapper.UserInfoDao;
 import com.jiang.entity.po.UserInfo;
 import com.jiang.entity.vo.PaginationResultVO;
 
+import org.apache.catalina.User;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import javax.annotation.Resource;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -24,6 +38,15 @@ public class UserInfoServiceImp implements UserInfoService {
 
 	@Resource
 	private UserInfoDao<UserInfo,UserInfoQuery> userInfoDao;
+
+	@Resource
+	private EmailCodeService emailCodeService;
+
+	@Resource
+	private UserMessageDao<UserMessage, UserMessageQuery> userMessageDao;
+
+	@Resource
+	private UserIntegralRecordDao<UserIntegralRecord, UserIntegralRecordQuery> userIntegralRecordDao;
 	/**
      * @Description(描述):根据条件查询列表
 	 */
@@ -162,5 +185,81 @@ public class UserInfoServiceImp implements UserInfoService {
 		return this.userInfoDao.deleteByNickName(nickName);
 	}
 
+	/**
+	 * 用户注册
+	 *
+	 */
+	@Transactional(rollbackFor = Exception.class)
+	public void register(String email,String emailCode,String nickName,String password){
+		UserInfo userInfo = this.userInfoDao.selectByEmail(email);
+		if(null!=userInfo){
+			throw new BusinessException("邮箱账号已存在");
+		}
+		userInfo = this.userInfoDao.selectByNickName(nickName);
+		if(null!=userInfo){
+			throw new BusinessException("昵称已存在");
+		}
+		//验证邮箱，根据验证码与邮箱验证
+		emailCodeService.checkCode(email,emailCode);
 
+		//存储信息
+		String userId = StringTools.getRandomNumber(Constants.LENGTH_10);
+
+		UserInfo insertInfo = new UserInfo();
+		insertInfo.setEmail(email);
+		insertInfo.setNickName(nickName);
+		insertInfo.setUserId(userId);
+		insertInfo.setPassword(StringTools.encodeMd5(password));
+		insertInfo.setJoinTime(LocalDateTime.now());
+		insertInfo.setStatus(UserStatusEnum.ENABLE.getStatus());
+		insertInfo.setTotalIntegral(Constants.ZERO);//总积分
+		insertInfo.setCurrentIntegral(Constants.ZERO);//当前积分
+		this.userInfoDao.insert(insertInfo);
+
+		//更新积分
+		updateUserIntegral(userId,UserIntegralOperTypeEnum.REGISTER,UserIntegralChangeTypeEnum.ADD.getChangeType(),Constants.INTEGRAL_5);
+
+		//记录消息
+		UserMessage userMessage = new UserMessage();
+		userMessage.setReceivedUserId(userId);
+		userMessage.setMessageType(MessageTypeEnum.SYS.getType());
+		userMessage.setCreateTime(LocalDateTime.now());
+		userMessage.setStatus(MessageStatusEnum.NO_READ.getStatus());
+		//欢迎消息
+		userMessage.setMessageContent(SysCacheUtils.getSysSetting().getRegisterSetting().getRegisterWelcomeInfo());
+		userMessageDao.insert(userMessage);
+
+	}
+
+	/**
+	 * 更新用户积分
+	 */
+	@Transactional(rollbackFor = Exception.class)
+	public void updateUserIntegral(String userId, UserIntegralOperTypeEnum operTypeEnum,Integer changType,Integer integral){
+		integral = changType*integral;
+		if(integral==0){
+			return;
+		}
+		UserInfo userInfo = userInfoDao.selectByUserId(userId);
+		//如果减成负数，就减当前数
+		if(UserIntegralChangeTypeEnum.REDUCE.getChangeType().equals(changType)&&
+		userInfo.getCurrentIntegral()+integral<0){
+			integral = changType*userInfo.getCurrentIntegral();
+		}
+
+		//记录条数
+		UserIntegralRecord record = new UserIntegralRecord();
+		record.setUserId(userId);
+		record.setOperType(operTypeEnum.getOperType());
+		record.setCreateTime(LocalDateTime.now());
+		record.setIntegral(integral);
+		this.userIntegralRecordDao.insert(record);
+
+		//更新用户积分
+		Integer count = this.userInfoDao.updateIntegral(userId,integral);
+		if(count==0){
+			throw new BusinessException("更新用户积分失败");
+		}
+
+	}
 }

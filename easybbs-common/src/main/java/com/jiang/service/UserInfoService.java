@@ -1,6 +1,7 @@
 package com.jiang.service;
 
 
+import com.jiang.Enums.UserIntegralOperTypeEnum;
 import com.jiang.entity.po.UserInfo;
 import com.jiang.entity.query.UserInfoQuery;
 import com.jiang.entity.vo.PaginationResultVO;
@@ -88,4 +89,14 @@ public interface UserInfoService {
 	 */
 	Integer deleteByNickName(String nickName);
 
+	void register(String email,String emailCode,String nickName,String password);
+
+	/**
+	 * 更新用户积分
+	 * @param userId
+	 * @param operTypeEnum
+	 * @param changType
+	 * @param integral
+	 */
+	void updateUserIntegral(String userId, UserIntegralOperTypeEnum operTypeEnum, Integer changType, Integer integral);
 }

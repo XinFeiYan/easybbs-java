@@ -26,5 +26,8 @@ public interface EmailCodeDao<T,P> extends BaseMapper {
 	 */
 	Integer deleteByEmailAndCode(@Param("email") String email, @Param("code") String code);
 
+	void disableEmailCode(@Param("email") String email);
 
+
+    void checkCode(String email, String emailCode);
 }

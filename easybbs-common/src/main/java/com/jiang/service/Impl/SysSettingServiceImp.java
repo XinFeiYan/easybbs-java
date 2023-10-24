@@ -1,6 +1,11 @@
 package com.jiang.service.Impl;
 
 
+import com.jiang.Enums.SysSettingCodeEnum;
+import com.jiang.Utils.JsonUtils;
+import com.jiang.Utils.StringTools;
+import com.jiang.Utils.SysCacheUtils;
+import com.jiang.entity.dto.SysSettingDto;
 import com.jiang.entity.query.SysSettingQuery;
 import com.jiang.entity.query.SimplePage;
 import com.jiang.Enums.PageSizeEnum;
@@ -9,8 +14,12 @@ import com.jiang.mapper.SysSettingDao;
 import com.jiang.entity.po.SysSetting;
 import com.jiang.entity.vo.PaginationResultVO;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
+import java.beans.PropertyDescriptor;
+import java.lang.reflect.Method;
 import java.util.List;
 
 /**
@@ -21,7 +30,7 @@ import java.util.List;
 @Service("sysSettingService")
 public class SysSettingServiceImp implements SysSettingService {
 
-
+	private static final Logger logger = LoggerFactory.getLogger(SysSettingServiceImp.class);
 	@Resource
 	private SysSettingDao<SysSetting,SysSettingQuery> sysSettingDao;
 	/**
@@ -108,6 +117,39 @@ public class SysSettingServiceImp implements SysSettingService {
 	@Override
 	public Integer deleteByCode(String code){
 		return this.sysSettingDao.deleteByCode(code);
+	}
+
+	public void refreshCache(){
+		try{
+			SysSettingDto sysSettingDto = new SysSettingDto();
+			List<SysSetting> list = this.sysSettingDao.selectList(new SysSettingQuery());
+			for(SysSetting sysSetting:list){
+				String json = sysSetting.getJsonContent();
+				if(StringTools.isEmpty(json)){
+					continue;
+				}
+				String code = sysSetting.getCode();
+				//获取枚举
+				SysSettingCodeEnum sysSettingCodeEnum = SysSettingCodeEnum.getByCode(code);
+				/**
+				 * 这段代码使用Java语言中的反射机制，主要实现了以下功能：
+				 * 通过 PropertyDescriptor 类来获取指定类（在此处为 SysSettingDto.class）中指定属性（在此处为 sysSettingCodeEnum.getPropName()）的描述符。
+				 * 通过调用 getPropertyType() 方法获取该属性的数据类型。
+				 * 反射是通过class文件从而创建java对象
+				 */
+				PropertyDescriptor pd = new PropertyDescriptor(sysSettingCodeEnum.getPropName(), SysSettingDto.class);
+				Method method = pd.getWriteMethod();
+				//实例化对象
+				Class subCalssz = Class.forName(sysSettingCodeEnum.getClassz());
+				//通过反射将值输入进去
+				method.invoke(sysSettingDto, JsonUtils.convertJson2Obj(json,subCalssz));
+
+			}
+			//存入缓存
+			SysCacheUtils.refresh(sysSettingDto);
+		}catch (Exception e){
+			logger.error("刷新缓存失败",e);
+		}
 	}
 
 

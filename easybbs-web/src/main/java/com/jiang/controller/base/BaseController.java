@@ -1,4 +1,4 @@
-package com.jiang.controller;
+package com.jiang.controller.base;
 
 import com.jiang.Enums.ResponseCodeEnum;
 import com.jiang.entity.vo.ResponseVO;

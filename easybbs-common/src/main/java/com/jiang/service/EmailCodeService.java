@@ -58,4 +58,18 @@ public interface EmailCodeService {
 	 */
 	Integer deleteByEmailAndCode(String email, String code);
 
+	/**
+	 * 发送邮箱验证码
+	 * @param email
+	 * @param type
+	 */
+	void sendEmailCode(String email,Integer type);
+
+	/**
+	 * 邮箱验证码检测
+	 * @param email
+	 * @param emailCod
+	 */
+	void checkCode(String email,String emailCod);
+
 }
