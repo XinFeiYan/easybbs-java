@@ -5,6 +5,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
+//添加包扫描
 @SpringBootApplication(scanBasePackages = {"com.jiang"})
 @MapperScan(basePackages = {"com.jiang.mapper"})
 @EnableTransactionManagement

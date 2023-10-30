@@ -141,7 +141,7 @@ public class SysSettingServiceImp implements SysSettingService {
 				Method method = pd.getWriteMethod();
 				//实例化对象
 				Class subCalssz = Class.forName(sysSettingCodeEnum.getClassz());
-				//通过反射将值输入进去
+				//通过反射将值输入进去,这就是获取propName对应的set方法后写值
 				method.invoke(sysSettingDto, JsonUtils.convertJson2Obj(json,subCalssz));
 
 			}

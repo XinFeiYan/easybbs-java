@@ -11,7 +11,7 @@ import javax.annotation.Resource;
 public class InitRun implements ApplicationRunner {
     @Resource
     private SysSettingService sysSettingService;
-
+    //服务器启动就开始加载
     public void run(ApplicationArguments arg)throws Exception{
         sysSettingService.refreshCache();
     }

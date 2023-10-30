@@ -3,14 +3,19 @@ package com.jiang.service.Impl;
 
 import com.jiang.Enums.*;
 import com.jiang.Exception.BusinessException;
+import com.jiang.Utils.JsonUtils;
+import com.jiang.Utils.OKHttpUtils;
 import com.jiang.Utils.StringTools;
 import com.jiang.Utils.SysCacheUtils;
+
+import com.jiang.entity.config.WebConfig;
 import com.jiang.entity.constants.Constants;
-import com.jiang.entity.po.EmailCode;
+import com.jiang.entity.dto.SessionWebUserDto;
+
 import com.jiang.entity.po.UserIntegralRecord;
 import com.jiang.entity.po.UserMessage;
 import com.jiang.entity.query.*;
-import com.jiang.mapper.EmailCodeDao;
+
 import com.jiang.mapper.UserIntegralRecordDao;
 import com.jiang.mapper.UserMessageDao;
 import com.jiang.service.EmailCodeService;
@@ -19,13 +24,17 @@ import com.jiang.mapper.UserInfoDao;
 import com.jiang.entity.po.UserInfo;
 import com.jiang.entity.vo.PaginationResultVO;
 
-import org.apache.catalina.User;
+
+import org.apache.commons.lang3.ArrayUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @Description(描述):UserInfoServiceImp
@@ -35,7 +44,7 @@ import java.util.List;
 @Service("userInfoService")
 public class UserInfoServiceImp implements UserInfoService {
 
-
+	public static final Logger logger = LoggerFactory.getLogger(UserInfoServiceImp.class);
 	@Resource
 	private UserInfoDao<UserInfo,UserInfoQuery> userInfoDao;
 
@@ -47,6 +56,9 @@ public class UserInfoServiceImp implements UserInfoService {
 
 	@Resource
 	private UserIntegralRecordDao<UserIntegralRecord, UserIntegralRecordQuery> userIntegralRecordDao;
+
+	@Resource
+	private WebConfig webConfig;
 	/**
      * @Description(描述):根据条件查询列表
 	 */
@@ -260,6 +272,66 @@ public class UserInfoServiceImp implements UserInfoService {
 		if(count==0){
 			throw new BusinessException("更新用户积分失败");
 		}
+	}
 
+	@Override
+	public SessionWebUserDto login(String email, String password, String ip) {
+		//调用外部接口
+		UserInfo userInfo = userInfoDao.selectByEmail(email);
+		//数据库密码进行加密过
+		if(userInfo==null||!userInfo.getPassword().equals(password)){
+			throw new BusinessException("账号或密码错误");
+		}
+		if(UserStatusEnum.DISABLE.equals(userInfo.getStatus())){
+			throw new BusinessException("账号已禁用");
+		}
+		String ipAddress = getIpAddress(ip);
+
+		UserInfo upUserInfo = new UserInfo();
+		upUserInfo.setLastLoginTime(LocalDateTime.now());
+		upUserInfo.setLastLoginIp(ip);
+		upUserInfo.setLastLoginIpAddress(ipAddress);
+		this.userInfoDao.updateByUserId(upUserInfo,userInfo.getUserId());
+
+		SessionWebUserDto sessionWebUserDto = new SessionWebUserDto();
+		sessionWebUserDto.setNickname(userInfo.getNickName());
+		sessionWebUserDto.setUserId(userInfo.getUserId());
+		sessionWebUserDto.setProvince(ipAddress);
+		if(!StringTools.isEmpty(webConfig.getAdminEmails())&& ArrayUtils.contains(webConfig.getAdminEmails().split(","),userInfo.getEmail())){
+			sessionWebUserDto.setAdmin(true);
+		}else{
+			sessionWebUserDto.setAdmin(false);
+		}
+		return sessionWebUserDto;
+	}
+
+	//获取ip地址
+	public String getIpAddress(String ip){
+		try{
+			String url = "http://whois.pconline.com.cn/ipJson.jsp?json=true&ip"+ip;
+			String responseJson = OKHttpUtils.getRequest(url);
+			if(null==responseJson){
+				return Constants.NO_ADDRESS;
+			}
+			Map<String,String> addressInfo = JsonUtils.convertJson2Obj(responseJson,Map.class);
+			return addressInfo.get("pro");
+		}catch(Exception e){
+			logger.error("获取ip地址失败");
+		}
+		return Constants.NO_ADDRESS;
+	}
+
+	@Transactional(rollbackFor = Exception.class)
+	public void resetPwd(String email,String password,String emailCode){
+		//验证邮箱是否存在
+		if(userInfoDao.selectByEmail(email)==null){
+			throw new BusinessException("邮箱不存在");
+		}
+		//验证邮箱
+		emailCodeService.checkCode(email,emailCode);
+
+		UserInfo userInfo = new UserInfo();
+		userInfo.setPassword(password);
+		userInfoDao.updateByEmail(userInfo,email);
 	}
 }

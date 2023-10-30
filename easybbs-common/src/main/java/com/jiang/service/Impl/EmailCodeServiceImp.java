@@ -139,7 +139,7 @@ public class EmailCodeServiceImp implements EmailCodeService {
 	@Transactional(rollbackFor = Exception.class)
 	public void sendEmailCode(String email, Integer type) {
 		if(type == Constants.ZERO){
-			//注册时候已存在
+			//0表示注册，1表示找回密码
 			UserInfo userInfo = userInfoDao.selectByEmail(email);
 			if(userInfo!=null){
 				throw new BusinessException("邮箱已存在");

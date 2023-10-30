@@ -2,6 +2,7 @@ package com.jiang.service;
 
 
 import com.jiang.Enums.UserIntegralOperTypeEnum;
+import com.jiang.entity.dto.SessionWebUserDto;
 import com.jiang.entity.po.UserInfo;
 import com.jiang.entity.query.UserInfoQuery;
 import com.jiang.entity.vo.PaginationResultVO;
@@ -99,4 +100,12 @@ public interface UserInfoService {
 	 * @param integral
 	 */
 	void updateUserIntegral(String userId, UserIntegralOperTypeEnum operTypeEnum, Integer changType, Integer integral);
+
+	SessionWebUserDto login(String email,String password,String ip);
+
+	/**
+	 * 重置密码
+	 */
+	void resetPwd(String email,String password,String emailCode);
+
 }
